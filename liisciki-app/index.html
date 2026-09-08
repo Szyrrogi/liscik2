@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1F4B3F" />
+<title>Liściki — listy życzeń</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- EKRAN LOGOWANIA / REJESTRACJI -->
+<main id="view-auth" class="view view-auth hidden">
+  <div class="auth-card">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
+        <rect x="8" y="14" width="32" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4"/>
+        <circle cx="16" cy="14" r="5.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+        <line x1="24" y1="14" x2="24" y2="40" stroke="currentColor" stroke-width="2.4"/>
+      </svg>
+      <span>Liściki</span>
+    </div>
+    <p class="tagline">Zapisz, o czym marzysz. Zobacz, o czym marzą oni.</p>
+
+    <div id="auth-error" class="auth-error hidden"></div>
+
+    <form id="form-login" class="auth-form">
+      <label>E-mail
+        <input type="email" id="login-email" required autocomplete="email" />
+      </label>
+      <label>Hasło
+        <input type="password" id="login-password" required autocomplete="current-password" />
+      </label>
+      <button type="submit" class="btn btn-primary">Zaloguj się</button>
+      <button type="button" class="link-btn" id="go-register">Nie masz konta? Załóż je</button>
+    </form>
+
+    <form id="form-register" class="auth-form hidden">
+      <label>Imię / pseudonim
+        <input type="text" id="reg-name" required autocomplete="name" />
+      </label>
+      <label>E-mail
+        <input type="email" id="reg-email" required autocomplete="email" />
+      </label>
+      <label>Hasło (min. 6 znaków)
+        <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" />
+      </label>
+      <button type="submit" class="btn btn-primary">Załóż konto</button>
+      <button type="button" class="link-btn" id="go-login">Masz już konto? Zaloguj się</button>
+    </form>
+  </div>
+</main>
+
+<!-- EKRAN GŁÓWNY -->
+<div id="view-app" class="view view-app hidden">
+
+  <header class="topbar">
+    <div class="brand small">
+      <svg class="brand-mark" viewBox="0 0 48 48" width="24" height="24" aria-hidden="true">
+        <rect x="8" y="14" width="32" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.6"/>
+        <circle cx="16" cy="14" r="5.5" fill="none" stroke="currentColor" stroke-width="2.6"/>
+        <line x1="24" y1="14" x2="24" y2="40" stroke="currentColor" stroke-width="2.6"/>
+      </svg>
+      <span>Liściki</span>
+    </div>
+    <button id="btn-logout" class="icon-btn" title="Wyloguj się" aria-label="Wyloguj się">⏻</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="wishes">Moja lista</button>
+    <button class="tab" data-tab="friends">Znajomi</button>
+    <button class="tab" data-tab="requests">Zaproszenia <span id="req-badge" class="badge hidden">0</span></button>
+  </nav>
+
+  <!-- MOJA LISTA -->
+  <section id="tab-wishes" class="tab-panel">
+    <p class="hint">To Twoja tablica życzeń — Ty jej nie zobaczysz od tej strony: nie widzisz tu, kto co dla Ciebie zarezerwował. Niespodzianka zostaje niespodzianką.</p>
+    <form id="form-add-wish" class="wish-form">
+      <input type="text" id="wish-title" placeholder="Czego sobie życzysz? (np. Zestaw farb akwarelowych)" required maxlength="120" />
+      <textarea id="wish-desc" placeholder="Szczegóły — kolor, rozmiar, link… (opcjonalnie)" maxlength="500" rows="2"></textarea>
+      <button type="submit" class="btn btn-primary">Dodaj do listy</button>
+    </form>
+    <ul id="my-wishes-list" class="wish-list"></ul>
+    <p id="my-wishes-empty" class="empty-state hidden">Twoja lista jest jeszcze pusta. Dodaj pierwsze życzenie powyżej.</p>
+  </section>
+
+  <!-- ZNAJOMI -->
+  <section id="tab-friends" class="tab-panel hidden">
+    <form id="form-add-friend" class="friend-form">
+      <input type="email" id="friend-email" placeholder="E-mail znajomego" required />
+      <button type="submit" class="btn btn-secondary">Zaproś</button>
+    </form>
+    <ul id="friends-list" class="friends-list"></ul>
+    <p id="friends-empty" class="empty-state hidden">Nie masz jeszcze żadnych znajomych. Zaproś kogoś, podając jego e-mail.</p>
+  </section>
+
+  <!-- ZAPROSZENIA -->
+  <section id="tab-requests" class="tab-panel hidden">
+    <h3 class="section-title">Zaproszenia do znajomych</h3>
+    <ul id="requests-list" class="requests-list"></ul>
+    <p id="requests-empty" class="empty-state hidden">Brak nowych zaproszeń.</p>
+  </section>
+
+  <!-- WIDOK LISTY ZNAJOMEGO -->
+  <section id="tab-friend-view" class="tab-panel hidden">
+    <button id="back-to-friends" class="link-btn back-link">← Wróć do znajomych</button>
+    <h3 class="section-title" id="friend-view-title">Lista życzeń</h3>
+    <ul id="friend-wishes-list" class="wish-list"></ul>
+    <p id="friend-wishes-empty" class="empty-state hidden">Ta osoba nie dodała jeszcze żadnych życzeń.</p>
+  </section>
+
+</div>
+
+<template id="tpl-wish-own">
+  <li class="wish-card">
+    <div class="wish-body">
+      <h4 class="wish-title"></h4>
+      <p class="wish-desc"></p>
+    </div>
+    <button class="icon-btn danger btn-delete-wish" title="Usuń" aria-label="Usuń życzenie">✕</button>
+  </li>
+</template>
+
+<template id="tpl-wish-friend">
+  <li class="wish-card">
+    <div class="wish-body">
+      <h4 class="wish-title"></h4>
+      <p class="wish-desc"></p>
+      <p class="wish-reserved-by hidden"></p>
+    </div>
+    <button class="btn btn-claim"></button>
+  </li>
+</template>
+
+<template id="tpl-friend-item">
+  <li class="friend-item">
+    <span class="friend-name"></span>
+    <button class="link-btn view-friend-list">Zobacz listę →</button>
+  </li>
+</template>
+
+<template id="tpl-request-item">
+  <li class="request-item">
+    <span class="request-name"></span>
+    <div class="request-actions">
+      <button class="btn btn-primary btn-accept">Akceptuj</button>
+      <button class="btn btn-ghost btn-decline">Odrzuć</button>
+    </div>
+  </li>
+</template>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
