@@ -107,6 +107,7 @@ auth.onAuthStateChanged(async (user) => {
     startMyWishesListener();
     startFriendsListener();
     startRequestsListener();
+    startSentRequestsListener();
   } else {
     currentUser = null;
     friendsCache = [];
@@ -302,15 +303,14 @@ function startRequestsListener() {
 async function respondToRequest(reqId, req, accept) {
   try {
     if (accept) {
-      const batch = db.batch();
-      batch.update(db.collection('users').doc(currentUser.uid), {
+      // Każdy może aktualizować WYŁĄCZNIE własny dokument (tak stanowią reguły
+      // bezpieczeństwa). Osoba akceptująca dopisuje nadawcę do swoich znajomych
+      // od razu; nadawca dopisze odbiorcę u siebie, gdy tylko zauważy status
+      // "accepted" (patrz startSentRequestsListener niżej).
+      await db.collection('users').doc(currentUser.uid).update({
         friends: firebase.firestore.FieldValue.arrayUnion(req.from)
       });
-      batch.update(db.collection('users').doc(req.from), {
-        friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-      });
-      batch.update(db.collection('friendRequests').doc(reqId), { status: 'accepted' });
-      await batch.commit();
+      await db.collection('friendRequests').doc(reqId).update({ status: 'accepted' });
       showToast(`Jesteście teraz znajomymi z ${req.fromName || 'tą osobą'}.`);
     } else {
       await db.collection('friendRequests').doc(reqId).update({ status: 'declined' });
@@ -320,6 +320,29 @@ async function respondToRequest(reqId, req, accept) {
     showToast('Coś poszło nie tak.');
     console.error(err);
   }
+}
+
+// Nasłuchuje na WYSŁANE przeze mnie zaproszenia, które właśnie zostały
+// zaakceptowane, i dopisuje drugą osobę do MOJEJ własnej listy znajomych
+// (to musi zrobić klient nadawcy — reguły nie pozwalają zrobić tego za niego).
+function startSentRequestsListener() {
+  const unsub = db.collection('friendRequests')
+    .where('from', '==', currentUser.uid)
+    .where('status', '==', 'accepted')
+    .onSnapshot(async snap => {
+      for (const doc of snap.docs) {
+        const req = doc.data();
+        try {
+          await db.collection('users').doc(currentUser.uid).update({
+            friends: firebase.firestore.FieldValue.arrayUnion(req.to)
+          });
+          await db.collection('friendRequests').doc(doc.id).delete();
+        } catch (err) {
+          console.error('finalizing accepted request', err);
+        }
+      }
+    }, err => console.error('sent requests listener', err));
+  activeListeners.push(unsub);
 }
 
 // ---------------------------------------------------------------
