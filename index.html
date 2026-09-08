@@ -74,11 +74,7 @@
     <button id="btn-logout" class="icon-btn" title="Wyloguj się" aria-label="Wyloguj się">⏻</button>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-tab="wishes">Moja lista</button>
-    <button class="tab" data-tab="friends">Znajomi</button>
-    <button class="tab" data-tab="requests">Zaproszenia <span id="req-badge" class="badge hidden">0</span></button>
-  </nav>
+  <div class="tab-content">
 
   <!-- MOJA LISTA -->
   <section id="tab-wishes" class="tab-panel">
@@ -116,6 +112,20 @@
     <ul id="friend-wishes-list" class="wish-list"></ul>
     <p id="friend-wishes-empty" class="empty-state hidden">Ta osoba nie dodała jeszcze żadnych życzeń.</p>
   </section>
+
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="wishes">
+      <span class="tab-icon">🎁</span>Moja lista
+    </button>
+    <button class="tab" data-tab="friends">
+      <span class="tab-icon">👥</span>Znajomi
+    </button>
+    <button class="tab" data-tab="requests">
+      <span class="tab-icon">✉️</span>Zaproszenia <span id="req-badge" class="badge hidden">0</span>
+    </button>
+  </nav>
 
 </div>
 
