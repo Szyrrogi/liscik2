@@ -301,24 +301,31 @@ function startRequestsListener() {
 }
 
 async function respondToRequest(reqId, req, accept) {
-  try {
-    if (accept) {
-      // Każdy może aktualizować WYŁĄCZNIE własny dokument (tak stanowią reguły
-      // bezpieczeństwa). Osoba akceptująca dopisuje nadawcę do swoich znajomych
-      // od razu; nadawca dopisze odbiorcę u siebie, gdy tylko zauważy status
-      // "accepted" (patrz startSentRequestsListener niżej).
+  if (accept) {
+    try {
       await db.collection('users').doc(currentUser.uid).update({
         friends: firebase.firestore.FieldValue.arrayUnion(req.from)
       });
+    } catch (err) {
+      showToast('Błąd przy dopisywaniu znajomego do Twojego profilu.');
+      console.error('KROK 1 (users update) nie powiódł się:', err.code, err.message);
+      return;
+    }
+    try {
       await db.collection('friendRequests').doc(reqId).update({ status: 'accepted' });
       showToast(`Jesteście teraz znajomymi z ${req.fromName || 'tą osobą'}.`);
-    } else {
+    } catch (err) {
+      showToast('Błąd przy oznaczaniu zaproszenia jako zaakceptowane.');
+      console.error('KROK 2 (friendRequests update) nie powiódł się:', err.code, err.message);
+    }
+  } else {
+    try {
       await db.collection('friendRequests').doc(reqId).update({ status: 'declined' });
       showToast('Zaproszenie odrzucone.');
+    } catch (err) {
+      console.error('Odrzucenie zaproszenia nie powiodło się:', err);
+      showToast('Coś poszło nie tak.');
     }
-  } catch (err) {
-    showToast('Coś poszło nie tak.');
-    console.error(err);
   }
 }
 
