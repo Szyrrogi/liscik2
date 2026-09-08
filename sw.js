@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liisciki-cache-v1';
+const CACHE_NAME = 'liisciki-cache-v2';
 const APP_SHELL = [
   './index.html',
   './style.css',
@@ -25,13 +25,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Sieć > cache dla wywołań do Firebase; cache > sieć dla plików aplikacji.
+// Sieć jako pierwsza opcja dla plików aplikacji (zawsze najnowsza wersja,
+// gdy jest internet); cache tylko jako zapasowa kopia offline.
+// Ruch do Firebase nigdy nie jest przechwytywany.
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
   if (url.includes('googleapis.com') || url.includes('firestore.googleapis.com') || url.includes('gstatic.com/firebasejs')) {
-    return; // nie cache'uj ruchu do Firebase / SDK
+    return;
   }
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
