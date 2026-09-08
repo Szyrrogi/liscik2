@@ -128,14 +128,6 @@ function switchTab(name) {
   $all('.tab-panel').forEach(p => p.classList.add('hidden'));
   const panel = name === 'friend-view' ? $('#tab-friend-view') : $(`#tab-${name}`);
   panel.classList.remove('hidden');
-
-  const subtitles = {
-    wishes: 'Lista życzeń',
-    friends: 'Znajomi',
-    requests: 'Zaproszenia do znajomych',
-    'friend-view': 'Lista życzeń znajomego',
-  };
-  $('#page-subtitle').textContent = subtitles[name] || '';
 }
 
 $('#back-to-friends').addEventListener('click', () => {
@@ -146,53 +138,23 @@ $('#back-to-friends').addEventListener('click', () => {
 // ---------------------------------------------------------------
 // MOJA LISTA ŻYCZEŃ (owner never sees reservation info)
 // ---------------------------------------------------------------
-let editingWishId = null;
-
-function enterEditMode(wishId, w) {
-  editingWishId = wishId;
-  $('#wish-title').value = w.title;
-  $('#wish-desc').value = w.description || '';
-  $('#wish-submit-btn').textContent = 'Zapisz zmiany';
-  $('#wish-cancel-edit').classList.remove('hidden');
-  $('#wish-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  $('#wish-title').focus();
-}
-
-function exitEditMode() {
-  editingWishId = null;
-  $('#form-add-wish').reset();
-  $('#wish-submit-btn').textContent = 'Dodaj do listy';
-  $('#wish-cancel-edit').classList.add('hidden');
-}
-
-$('#wish-cancel-edit').addEventListener('click', exitEditMode);
-
 $('#form-add-wish').addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = $('#wish-title').value.trim();
   const desc = $('#wish-desc').value.trim();
   if (!title) return;
   try {
-    if (editingWishId) {
-      await db.collection('wishes').doc(editingWishId).update({
-        title,
-        description: desc,
-      });
-      showToast('Zapisano zmiany.');
-      exitEditMode();
-    } else {
-      await db.collection('wishes').add({
-        ownerId: currentUser.uid,
-        ownerName: currentUser.displayName,
-        title,
-        description: desc,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-      $('#form-add-wish').reset();
-      showToast('Dodano do Twojej listy.');
-    }
+    await db.collection('wishes').add({
+      ownerId: currentUser.uid,
+      ownerName: currentUser.displayName,
+      title,
+      description: desc,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    $('#form-add-wish').reset();
+    showToast('Dodano do Twojej listy.');
   } catch (err) {
-    showToast(editingWishId ? 'Nie udało się zapisać zmian.' : 'Nie udało się dodać życzenia.');
+    showToast('Nie udało się dodać życzenia.');
     console.error(err);
   }
 });
@@ -205,15 +167,14 @@ function startMyWishesListener() {
       const list = $('#my-wishes-list');
       list.innerHTML = '';
       $('#my-wishes-empty').classList.toggle('hidden', !snap.empty);
-      $('#my-wishes-more').classList.toggle('hidden', snap.empty);
       snap.forEach(doc => {
         const w = doc.data();
         const tpl = $('#tpl-wish-own').content.cloneNode(true);
         tpl.querySelector('.wish-title').textContent = w.title;
         const descEl = tpl.querySelector('.wish-desc');
         if (w.description) descEl.textContent = w.description; else descEl.remove();
-        tpl.querySelector('.btn-edit-wish').addEventListener('click', () => enterEditMode(doc.id, w));
-        tpl.querySelector('.btn-delete-wish').addEventListener('click', () => deleteWish(doc.id));
+        const delBtn = tpl.querySelector('.btn-delete-wish');
+        delBtn.addEventListener('click', () => deleteWish(doc.id));
         list.appendChild(tpl);
       });
     }, err => console.error('my wishes listener', err));
@@ -223,7 +184,6 @@ function startMyWishesListener() {
 async function deleteWish(wishId) {
   try {
     await db.collection('wishes').doc(wishId).delete();
-    if (editingWishId === wishId) exitEditMode();
     showToast('Usunięto życzenie.');
   } catch (err) {
     showToast('Nie udało się usunąć.');
